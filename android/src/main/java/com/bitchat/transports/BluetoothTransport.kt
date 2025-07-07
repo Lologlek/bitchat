@@ -17,6 +17,7 @@ import android.bluetooth.BluetoothGattServer
 import android.bluetooth.BluetoothGattServerCallback
 import android.bluetooth.BluetoothGattService
 import android.bluetooth.BluetoothManager
+import android.bluetooth.BluetoothProfile
 import android.bluetooth.le.AdvertiseCallback
 import android.bluetooth.le.AdvertiseData
 import android.bluetooth.le.AdvertiseSettings
@@ -30,6 +31,7 @@ import android.content.Context
 import android.os.ParcelUuid
 import com.bitchat.model.BitchatPacket
 import com.bitchat.model.PeerInfo
+import com.bitchat.model.BinaryProtocol
 import java.util.UUID
 
 /**
@@ -52,6 +54,7 @@ class BluetoothTransport(private val context: Context) : TransportProtocol {
     private var gattServer: BluetoothGattServer? = null
 
     private val peers = mutableMapOf<String, BluetoothDevice>()
+    private val gattConnections = mutableMapOf<String, BluetoothGatt>()
     private var delegate: TransportDelegate? = null
 
     override val isAvailable: Boolean
@@ -65,8 +68,10 @@ class BluetoothTransport(private val context: Context) : TransportProtocol {
             if (newState == android.bluetooth.BluetoothProfile.STATE_CONNECTED) {
                 peers[device.address] = device
                 delegate?.onPeerDiscovered(PeerInfo(device.address))
+                gattConnections[device.address]?.close()
             } else if (newState == android.bluetooth.BluetoothProfile.STATE_DISCONNECTED) {
                 peers.remove(device.address)?.let { delegate?.onPeerLost(PeerInfo(it.address)) }
+                gattConnections.remove(device.address)?.close()
             }
         }
 
@@ -80,7 +85,7 @@ class BluetoothTransport(private val context: Context) : TransportProtocol {
             value: ByteArray
         ) {
             if (characteristic.uuid == CHARACTERISTIC_UUID) {
-                delegate?.onPacketReceived(BitchatPacket(type = 0, senderID = byteArrayOf(), payload = value), PeerInfo(device.address))
+                handleIncoming(value, device)
             }
             if (responseNeeded) {
                 gattServer?.sendResponse(device, requestId, BluetoothGatt.GATT_SUCCESS, 0, null)
@@ -100,9 +105,25 @@ class BluetoothTransport(private val context: Context) : TransportProtocol {
     }
 
     private val gattCallback = object : BluetoothGattCallback() {
+        override fun onConnectionStateChange(gatt: BluetoothGatt, status: Int, newState: Int) {
+            if (newState == android.bluetooth.BluetoothProfile.STATE_CONNECTED) {
+                gattConnections[gatt.device.address] = gatt
+                gatt.discoverServices()
+            } else if (newState == android.bluetooth.BluetoothProfile.STATE_DISCONNECTED) {
+                gattConnections.remove(gatt.device.address)?.close()
+            }
+        }
+
+        override fun onServicesDiscovered(gatt: BluetoothGatt, status: Int) {
+            val service = gatt.getService(SERVICE_UUID) ?: return
+            service.getCharacteristic(CHARACTERISTIC_UUID)?.let {
+                gatt.setCharacteristicNotification(it, true)
+            }
+        }
+
         override fun onCharacteristicChanged(gatt: BluetoothGatt, characteristic: BluetoothGattCharacteristic) {
             if (characteristic.uuid == CHARACTERISTIC_UUID) {
-                delegate?.onPacketReceived(BitchatPacket(type = 0, senderID = byteArrayOf(), payload = characteristic.value), PeerInfo(gatt.device.address))
+                handleIncoming(characteristic.value, gatt.device)
             }
         }
     }
@@ -147,7 +168,7 @@ class BluetoothTransport(private val context: Context) : TransportProtocol {
     }
 
     override fun send(packet: BitchatPacket, toPeer: String?) {
-        val data = packet.payload
+        val data = BinaryProtocol.encode(packet)
         if (toPeer == null) {
             peers.values.forEach { sendToDevice(it, data) }
         } else {
@@ -156,14 +177,38 @@ class BluetoothTransport(private val context: Context) : TransportProtocol {
     }
 
     private fun sendToDevice(device: BluetoothDevice, data: ByteArray) {
-        val gatt = device.connectGatt(context, false, gattCallback)
-        val service = gatt.getService(SERVICE_UUID) ?: return
-        val characteristic = service.getCharacteristic(CHARACTERISTIC_UUID) ?: return
+        val gatt = gattConnections[device.address] ?: device.connectGatt(context, false, gattCallback).also {
+            gattConnections[device.address] = it
+        }
+        val service = gatt.getService(SERVICE_UUID)
+        val characteristic = service?.getCharacteristic(CHARACTERISTIC_UUID)
+        if (service == null || characteristic == null) {
+            gatt.discoverServices()
+            return
+        }
         characteristic.value = data
         gatt.writeCharacteristic(characteristic)
     }
 
+    private fun forwardPacket(packet: BitchatPacket, exclude: String) {
+        val data = BinaryProtocol.encode(packet)
+        peers.forEach { (addr, device) ->
+            if (addr != exclude) {
+                sendToDevice(device, data)
+            }
+        }
+    }
+
     override fun setDelegate(delegate: TransportDelegate) {
         this.delegate = delegate
+    }
+
+    private fun handleIncoming(data: ByteArray, fromDevice: BluetoothDevice) {
+        val packet = BinaryProtocol.decode(data) ?: return
+        delegate?.onPacketReceived(packet, PeerInfo(fromDevice.address))
+        if (packet.ttl > 1) {
+            val relay = packet.copy(ttl = (packet.ttl - 1).toByte())
+            forwardPacket(relay, fromDevice.address)
+        }
     }
 }
