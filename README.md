@@ -151,3 +151,22 @@ The protocol is designed to be platform-agnostic. An Android client can be built
 - Bluetooth LE APIs
 - Same packet structure and encryption
 - Compatible service/characteristic UUIDs
+
+### Building the Android App
+
+The Android client requires **JDK 17** and the Android SDK. To build a release APK from the command line, run:
+
+```bash
+./gradlew assembleRelease
+```
+
+Bluetooth functionality only works on physical devices running **Android 8 (API 26)** or higher. Emulators generally lack proper Bluetooth Low Energy support.
+
+### Gradle Troubleshooting
+
+If Gradle sync fails:
+
+- Verify that `JAVA_HOME` points to JDK 17.
+- Run `./gradlew clean` and reopen Android Studio.
+- Delete the `.gradle` and `build` directories if errors persist.
+- Ensure your network connection allows Gradle to download dependencies.
