@@ -59,3 +59,30 @@ __pycache__/
 ## Temporary files
 *.tmp
 *.temp
+# Android/Gradle
+.gradle/
+**/build/
+# Local configuration
+local.properties
+# Log files
+*.log
+# Android Studio generated files
+captures/
+.externalNativeBuild/
+.cxx/
+*.aab
+*.apk
+output-metadata.json
+# IntelliJ
+*.iml
+.idea/
+misc.xml
+deploymentTargetDropDown.xml
+render.experimental.xml
+# Keystore files
+*.jks
+*.keystore
+# Google Services (e.g. APIs or Firebase)
+google-services.json
+# Android Profiling
+*.hprof
