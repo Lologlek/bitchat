@@ -1,2 +1,3 @@
 rootProject.name = "bitchat-android"
 include(":app")
+include(":core")
