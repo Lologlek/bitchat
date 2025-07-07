@@ -1,4 +1,4 @@
-package com.example.bitchat
+package chat.bitchat
 
 import java.nio.ByteBuffer
 

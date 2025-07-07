@@ -4,11 +4,11 @@ plugins {
 }
 
 android {
-    namespace = "com.example.bitchat"
+    namespace = "chat.bitchat"
     compileSdk = 34
 
     defaultConfig {
-        applicationId = "com.example.bitchat"
+        applicationId = "chat.bitchat"
         minSdk = 24
         targetSdk = 34
         versionCode = 1

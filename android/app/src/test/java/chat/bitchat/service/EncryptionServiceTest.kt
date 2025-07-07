@@ -1,4 +1,4 @@
-package com.example.bitchat
+package chat.bitchat.service
 
 import org.junit.Assert.*
 import org.junit.Test
