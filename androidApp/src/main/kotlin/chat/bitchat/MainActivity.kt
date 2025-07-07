@@ -9,10 +9,15 @@ import chat.bitchat.viewmodel.ChatViewModel
 import chat.bitchat.ui.MainScreen
 
 class MainActivity : ComponentActivity() {
-    private val transport: TransportLayer by lazy { TransportManagerLayer(this) }
-    private val viewModel by lazy { ChatViewModel(transport) }
+    private lateinit var transport: TransportLayer
+    private lateinit var viewModel: ChatViewModel
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+
+        transport = TransportManagerLayer(this)
+        viewModel = ChatViewModel(transport)
+
         setContent {
             MainScreen(viewModel)
         }
