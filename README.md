@@ -169,27 +169,17 @@ The debug APK will be written to `app/build/outputs/apk/debug/app-debug.apk`.
 adb install app/build/outputs/apk/debug/app-debug.apk
 ```
 
+
 ## Running Tests
 
-To execute the unit tests, use a macOS machine with Xcode and SwiftUI installed.
+Use the helper script `run_tests.sh` to execute the Swift package tests. The script checks for the presence of SwiftUI and skips the tests on platforms other than macOS.
 
-1. Open the package in Xcode:
+```bash
+./run_tests.sh
+```
 
-   ```bash
-   open Package.swift
-   ```
+On macOS you can also open the package in Xcode and run the **bitchat** scheme (⌘U) or invoke:
 
-2. Choose the **bitchat** scheme and press **⌘U** to run all tests. You can also
-   run them from Terminal:
-
-   ```bash
-   xcodebuild test -scheme bitchat-Package
-   ```
-
-   Or invoke Swift Package Manager directly:
-
-   ```bash
-   swift test
-   ```
-
-   These commands require macOS because the project depends on SwiftUI.
+```bash
+xcodebuild test -scheme bitchat-Package
+```
