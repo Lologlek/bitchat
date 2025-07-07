@@ -153,6 +153,22 @@ The protocol is designed to be platform-agnostic. An Android client can be built
 - Same packet structure and encryption
 - Compatible service/characteristic UUIDs
 
+## Building the Android App
+
+1. Install **Android Studio** or the Android SDK command line tools and ensure the SDK (API level 34) is available. Set the `ANDROID_HOME` environment variable so that Gradle can locate the SDK.
+2. From the `android` directory run:
+
+```bash
+./gradlew assembleDebug
+```
+
+The debug APK will be written to `app/build/outputs/apk/debug/app-debug.apk`.
+3. Deploy the APK to a connected device or emulator with:
+
+```bash
+adb install app/build/outputs/apk/debug/app-debug.apk
+```
+
 ## Running Tests
 
 To execute the unit tests, use a macOS machine with Xcode and SwiftUI installed.
