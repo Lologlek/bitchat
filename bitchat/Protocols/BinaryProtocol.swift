@@ -19,9 +19,9 @@ extension Data {
 }
 
 // Binary Protocol Format:
-// Header (Fixed 13 bytes):
+// Header (Fixed 14 bytes):
 // - Version: 1 byte
-// - Type: 1 byte  
+// - Type: 1 byte
 // - TTL: 1 byte
 // - Timestamp: 8 bytes (UInt64)
 // - Flags: 1 byte (bit 0: hasRecipient, bit 1: hasSignature)
@@ -34,7 +34,8 @@ extension Data {
 // - Signature: 64 bytes (if hasSignature flag set)
 
 struct BinaryProtocol {
-    static let headerSize = 13
+    // Fixed header consists of 14 bytes (see layout above)
+    static let headerSize = 14
     static let senderIDSize = 8
     static let recipientIDSize = 8
     static let signatureSize = 64
