@@ -52,12 +52,24 @@ class EncryptionService {
     }
     
     // Create combined public key data for exchange
+    // Includes a signature proving ownership of the ephemeral keys
     func getCombinedPublicKeyData() -> Data {
         var data = Data()
-        data.append(publicKey.rawRepresentation)  // 32 bytes - ephemeral encryption key
-        data.append(signingPublicKey.rawRepresentation)  // 32 bytes - ephemeral signing key
-        data.append(identityPublicKey.rawRepresentation)  // 32 bytes - persistent identity key
-        return data  // Total: 96 bytes
+
+        // Ephemeral encryption and signing keys
+        data.append(publicKey.rawRepresentation)  // 32 bytes
+        data.append(signingPublicKey.rawRepresentation)  // 32 bytes
+
+        // Persistent identity key used for favorites
+        data.append(identityPublicKey.rawRepresentation)  // 32 bytes
+
+        // Sign ephemeral keys with identity key to prove ownership
+        let toSign = publicKey.rawRepresentation + signingPublicKey.rawRepresentation
+        if let signature = try? identityKey.signature(for: toSign) {
+            data.append(signature)  // 64 bytes
+        }
+
+        return data  // Total: 160 bytes
     }
     
     // Add peer's combined public keys
@@ -65,27 +77,33 @@ class EncryptionService {
         try cryptoQueue.sync(flags: .barrier) {
             // Convert to array for safe access
             let keyBytes = [UInt8](publicKeyData)
-            
-            guard keyBytes.count == 96 else {
-                // print("[CRYPTO] Invalid public key data size: \(keyBytes.count), expected 96")
+
+            guard keyBytes.count == 160 else {
+                // print("[CRYPTO] Invalid public key data size: \(keyBytes.count), expected 160")
                 throw EncryptionError.invalidPublicKey
             }
-            
+
             // Extract all three keys: 32 for key agreement + 32 for signing + 32 for identity
             let keyAgreementData = Data(keyBytes[0..<32])
             let signingKeyData = Data(keyBytes[32..<64])
             let identityKeyData = Data(keyBytes[64..<96])
+            let signatureData = Data(keyBytes[96..<160])
             
             let publicKey = try Curve25519.KeyAgreement.PublicKey(rawRepresentation: keyAgreementData)
-            peerPublicKeys[peerID] = publicKey
-            
             let signingKey = try Curve25519.Signing.PublicKey(rawRepresentation: signingKeyData)
-            peerSigningKeys[peerID] = signingKey
-            
             let identityKey = try Curve25519.Signing.PublicKey(rawRepresentation: identityKeyData)
+
+            // Verify signature of the ephemeral keys using the identity key
+            let message = keyAgreementData + signingKeyData
+            guard identityKey.isValidSignature(signatureData, for: message) else {
+                throw EncryptionError.invalidSignature
+            }
+
+            peerPublicKeys[peerID] = publicKey
+            peerSigningKeys[peerID] = signingKey
             peerIdentityKeys[peerID] = identityKey
-            
-            // Stored all three keys for peer
+
+            // Stored all verified keys for peer
             
             // Generate shared secret for encryption
             if let publicKey = peerPublicKeys[peerID] {
@@ -160,6 +178,7 @@ class EncryptionService {
 enum EncryptionError: Error {
     case noSharedSecret
     case invalidPublicKey
+    case invalidSignature
     case encryptionFailed
     case decryptionFailed
 }
