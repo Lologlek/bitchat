@@ -4,21 +4,37 @@ plugins {
 }
 
 android {
-    namespace = "com.example.bitchat"
+    namespace = "chat.bitchat"
     compileSdk = 34
 
     defaultConfig {
-        applicationId = "com.example.bitchat"
+        applicationId = "chat.bitchat"
         minSdk = 24
         targetSdk = 34
         versionCode = 1
-        versionName = "1.0"
+        versionName = "1.0.0"
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
 
+    signingConfigs {
+        create("release") {
+            val store = System.getenv("BITCHAT_KEYSTORE")
+            if (store != null) {
+                storeFile = file(store)
+            }
+            storePassword = System.getenv("BITCHAT_KEYSTORE_PASSWORD")
+            keyAlias = System.getenv("BITCHAT_KEY_ALIAS") ?: "bitchat"
+            keyPassword = System.getenv("BITCHAT_KEY_PASSWORD")
+        }
+    }
+
     buildTypes {
+        debug {
+            signingConfig = signingConfigs.release
+        }
         release {
-            minifyEnabled = false
+            signingConfig = signingConfigs.release
+            minifyEnabled = true
             proguardFiles(
                 getDefaultProguardFile("proguard-android-optimize.txt"),
                 "proguard-rules.pro"

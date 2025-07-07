@@ -169,6 +169,32 @@ The debug APK will be written to `app/build/outputs/apk/debug/app-debug.apk`.
 adb install app/build/outputs/apk/debug/app-debug.apk
 ```
 
+### Signing the Release APK
+
+1. Generate a keystore if you don't already have one:
+
+```bash
+keytool -genkeypair -v -keystore release.jks -alias bitchat \
+  -keyalg RSA -keysize 2048 -validity 10000
+```
+
+2. Export the signing credentials so Gradle can locate them:
+
+```bash
+export BITCHAT_KEYSTORE=/path/to/release.jks
+export BITCHAT_KEYSTORE_PASSWORD=<keystore-password>
+export BITCHAT_KEY_ALIAS=bitchat
+export BITCHAT_KEY_PASSWORD=<key-password>
+```
+
+3. Build the signed release APK:
+
+```bash
+./gradlew assembleRelease
+```
+
+The signed APK will be written to `app/build/outputs/apk/release/app-release.apk`.
+
 
 ## Running Tests
 
