@@ -19,8 +19,14 @@ class TransportManager {
     }
 
     fun sendOptimal(packet: BitchatPacket, toPeer: String?) {
-        // Simple strategy: use first available transport
-        val transport = transports.firstOrNull { it.isAvailable }
-        transport?.send(packet, toPeer)
+        // Prefer WiFi Direct when available, otherwise fall back to Bluetooth
+        val wifi = transports.firstOrNull { it.transportType == TransportType.WIFI_DIRECT && it.isAvailable }
+        val ble = transports.firstOrNull { it.transportType == TransportType.BLUETOOTH && it.isAvailable }
+
+        when {
+            wifi != null -> wifi.send(packet, toPeer)
+            ble != null -> ble.send(packet, toPeer)
+            else -> transports.firstOrNull { it.isAvailable }?.send(packet, toPeer)
+        }
     }
 }
