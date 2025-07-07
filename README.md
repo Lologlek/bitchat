@@ -151,3 +151,12 @@ The protocol is designed to be platform-agnostic. An Android client can be built
 - Bluetooth LE APIs
 - Same packet structure and encryption
 - Compatible service/characteristic UUIDs
+
+### Building the Android Client
+
+1. Install Android Studio with the latest Android SDK.
+2. Open the `android` directory as a project.
+3. Let Gradle sync and download dependencies.
+4. Connect a physical device with Bluetooth LE and run the `app` module.
+
+This module uses the same binary protocol and UUIDs as the iOS version so both platforms can interoperate on the mesh network.
