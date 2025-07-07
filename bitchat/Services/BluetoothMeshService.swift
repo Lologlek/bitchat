@@ -376,6 +376,42 @@ class BluetoothMeshService: NSObject {
         // Start cover traffic for privacy
         startCoverTraffic()
     }
+
+    enum SendError: Error {
+        case invalidPacket
+        case noConnectedPeers
+    }
+
+    func send(_ packet: BitchatPacket, completion: ((Result<Void, Error>) -> Void)? = nil) {
+        guard let data = packet.toBinaryData() else {
+            completion?(.failure(SendError.invalidPacket))
+            return
+        }
+
+        var sent = false
+
+        for (_, peripheral) in connectedPeripherals {
+            if let characteristic = peripheralCharacteristics[peripheral],
+               peripheral.state == .connected,
+               (characteristic.properties.contains(.write) || characteristic.properties.contains(.writeWithoutResponse)) {
+
+                let writeType: CBCharacteristicWriteType = data.count > 512 ? .withResponse : .withoutResponse
+                peripheral.writeValue(data, for: characteristic, type: writeType)
+                sent = true
+            }
+        }
+
+        if let char = characteristic, !subscribedCentrals.isEmpty {
+            let success = peripheralManager?.updateValue(data, for: char, onSubscribedCentrals: nil) ?? false
+            sent = sent || success
+        }
+
+        if sent {
+            completion?(.success(()))
+        } else {
+            completion?(.failure(SendError.noConnectedPeers))
+        }
+    }
     
     func sendBroadcastAnnounce() {
         guard let vm = delegate as? ChatViewModel else { return }

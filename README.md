@@ -56,7 +56,8 @@ This project is released into the public domain. See the [LICENSE](LICENSE) file
 1. Open Xcode and create a new iOS/macOS App
 2. Copy all Swift files from the `bitchat` directory into your project
 3. Update Info.plist with Bluetooth permissions
-4. Set deployment target to iOS 16.0 / macOS 13.0
+4. Grant Bluetooth access at runtime when the app first launches
+5. Set deployment target to iOS 16.0 / macOS 13.0
 
 ## Usage
 
