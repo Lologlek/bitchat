@@ -43,6 +43,8 @@ struct BinaryProtocol {
         static let hasRecipient: UInt8 = 0x01
         static let hasSignature: UInt8 = 0x02
         static let isCompressed: UInt8 = 0x04
+        // Alias used by cross platform implementations
+        static let IS_COMPRESSED: UInt8 = isCompressed
     }
     
     // Encode BitchatPacket to binary format
@@ -81,7 +83,7 @@ struct BinaryProtocol {
             flags |= Flags.hasSignature
         }
         if isCompressed {
-            flags |= Flags.isCompressed
+            flags |= Flags.IS_COMPRESSED
         }
         data.append(flags)
         
@@ -147,7 +149,7 @@ struct BinaryProtocol {
         let flags = data[offset]; offset += 1
         let hasRecipient = (flags & Flags.hasRecipient) != 0
         let hasSignature = (flags & Flags.hasSignature) != 0
-        let isCompressed = (flags & Flags.isCompressed) != 0
+        let isCompressed = (flags & Flags.IS_COMPRESSED) != 0
         
         // Payload length
         let payloadLengthData = data[offset..<offset+2]
