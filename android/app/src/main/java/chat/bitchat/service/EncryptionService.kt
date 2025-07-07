@@ -1,4 +1,4 @@
-package com.example.bitchat
+package chat.bitchat.service
 
 import java.security.KeyPairGenerator
 import java.security.KeyPair

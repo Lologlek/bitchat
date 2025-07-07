@@ -15,7 +15,7 @@ import java.util.Date
 
 class ChatViewModel(
     private val transport: TransportLayer,
-    private val encryptionKey: ByteArray? = null
+    private val encryptionService: EncryptionService? = null
 ) : ViewModel(), TransportDelegate {
 
     var nickname by mutableStateOf("user" + (1000..9999).random())
@@ -36,15 +36,12 @@ class ChatViewModel(
             return
         }
 
-        val encrypted = encryptionKey?.let { EncryptionService.encrypt(content, it) }
         val message = BitchatMessage(
             sender = nickname,
-            content = if (encrypted == null) content else "",
+            content = content,
             timestamp = Date(),
             isRelay = false,
-            senderPeerID = null,
-            encryptedContent = encrypted,
-            isEncrypted = encrypted != null
+            senderPeerID = null
         )
         messages.add(message)
         transport.sendMessage(message, null)
@@ -52,7 +49,7 @@ class ChatViewModel(
 
     fun sendPrivateMessage(content: String, peerId: String) {
         if (content.isBlank()) return
-        val encrypted = encryptionKey?.let { EncryptionService.encrypt(content, it) }
+        val encrypted = encryptionService?.encrypt(content.toByteArray(), peerId)
         val message = BitchatMessage(
             sender = nickname,
             content = if (encrypted == null) content else "",
@@ -70,9 +67,15 @@ class ChatViewModel(
     }
 
     override fun onMessageReceived(message: BitchatMessage) {
-        val decoded = if (message.isEncrypted && message.encryptedContent != null && encryptionKey != null) {
+        val decoded = if (
+            message.isEncrypted &&
+            message.encryptedContent != null &&
+            message.senderPeerID != null &&
+            encryptionService != null
+        ) {
+            val plain = encryptionService.decrypt(message.encryptedContent, message.senderPeerID)
             message.copy(
-                content = EncryptionService.decrypt(message.encryptedContent, encryptionKey),
+                content = String(plain),
                 encryptedContent = null,
                 isEncrypted = false
             )
