@@ -59,3 +59,5 @@ __pycache__/
 ## Temporary files
 *.tmp
 *.temp
+# Ignore Android Gradle wrapper jar
+android/gradle/wrapper/gradle-wrapper.jar
