@@ -151,3 +151,28 @@ The protocol is designed to be platform-agnostic. An Android client can be built
 - Bluetooth LE APIs
 - Same packet structure and encryption
 - Compatible service/characteristic UUIDs
+
+## Running Tests
+
+To execute the unit tests, use a macOS machine with Xcode and SwiftUI installed.
+
+1. Open the package in Xcode:
+
+   ```bash
+   open Package.swift
+   ```
+
+2. Choose the **bitchat** scheme and press **⌘U** to run all tests. You can also
+   run them from Terminal:
+
+   ```bash
+   xcodebuild test -scheme bitchat-Package
+   ```
+
+   Or invoke Swift Package Manager directly:
+
+   ```bash
+   swift test
+   ```
+
+   These commands require macOS because the project depends on SwiftUI.

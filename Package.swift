@@ -19,5 +19,18 @@ let package = Package(
             name: "bitchat",
             path: "bitchat"
         ),
+        .testTarget(
+            name: "bitchatTests",
+            dependencies: ["bitchat"],
+            path: "bitchatTests",
+            exclude: ["Info.plist"],
+            sources: [
+                "BinaryProtocolTests.swift",
+                "BitchatMessageTests.swift",
+                "BloomFilterTests.swift",
+                "MessagePaddingTests.swift",
+                "PasswordProtectedRoomTests.swift"
+            ]
+        ),
     ]
 )
