@@ -1,5 +1,9 @@
 package com.example.bitchat
 
+import bitchat.BitchatPacket
+import bitchat.BinaryProtocol
+import bitchat.MessageType
+import bitchat.SpecialRecipients
 import org.junit.Assert.*
 import org.junit.Test
 
@@ -7,30 +11,72 @@ class BinaryProtocolTest {
     @Test
     fun encodeDecodePacket() {
         val packet = BitchatPacket(
-            type = 1,
+            type = MessageType.MESSAGE.value,
             senderID = "sender".toByteArray(),
             recipientID = "recipient".toByteArray(),
             timestamp = System.currentTimeMillis(),
-            payload = "Hello".toByteArray(),
+            payload = "Hello, World!".toByteArray(),
             signature = null,
             ttl = 5
         )
-        val encoded = BinaryProtocol.encode(packet)
-        val decoded = BinaryProtocol.decode(encoded)
+
+        val encoded = packet.toBinaryData()
+        assertNotNull(encoded)
+        val decoded = encoded?.let { BitchatPacket.from(it) }
         assertNotNull(decoded)
         decoded!!
-        assertArrayEquals(packet.senderID.copyOf(8), decoded.senderID)
-        assertArrayEquals(packet.recipientID!!.copyOf(8), decoded.recipientID)
+        assertEquals(packet.version, decoded.version)
         assertEquals(packet.type, decoded.type)
         assertEquals(packet.ttl, decoded.ttl)
+        assertEquals(packet.timestamp, decoded.timestamp)
         assertArrayEquals(packet.payload, decoded.payload)
     }
 
     @Test
     fun decodeInvalidPacket() {
-        assertNull(BinaryProtocol.decode(ByteArray(5)))
+        assertNull(BitchatPacket.from(ByteArray(5)))
         val invalid = ByteArray(20)
         invalid[0] = 2
-        assertNull(BinaryProtocol.decode(invalid))
+        assertNull(BitchatPacket.from(invalid))
+    }
+
+    @Test
+    fun broadcastPacket() {
+        val packet = BitchatPacket(
+            type = MessageType.MESSAGE.value,
+            senderID = "sender".toByteArray(),
+            recipientID = SpecialRecipients.BROADCAST,
+            timestamp = System.currentTimeMillis(),
+            payload = "Broadcast message".toByteArray(),
+            signature = null,
+            ttl = 3
+        )
+
+        val encoded = packet.toBinaryData()
+        assertNotNull(encoded)
+        val decoded = encoded?.let { BitchatPacket.from(it) }
+        assertNotNull(decoded)
+        assertArrayEquals(SpecialRecipients.BROADCAST, decoded!!.recipientID)
+    }
+
+    @Test
+    fun packetWithSignature() {
+        val signature = ByteArray(64) { 0xAB.toByte() }
+        val packet = BitchatPacket(
+            type = MessageType.MESSAGE.value,
+            senderID = "sender".toByteArray(),
+            recipientID = "recipient".toByteArray(),
+            timestamp = System.currentTimeMillis(),
+            payload = "Signed message".toByteArray(),
+            signature = signature,
+            ttl = 5
+        )
+
+        val encoded = packet.toBinaryData()
+        assertNotNull(encoded)
+        val decoded = encoded?.let { BitchatPacket.from(it) }
+        assertNotNull(decoded)
+        assertNotNull(decoded!!.signature)
+        assertArrayEquals(signature, decoded.signature)
     }
 }
