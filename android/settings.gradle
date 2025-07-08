@@ -1,2 +1,4 @@
 rootProject.name = "bitchat-android"
 include(":app")
+include(":androidApp")
+project(":androidApp").projectDir = file("../androidApp")
