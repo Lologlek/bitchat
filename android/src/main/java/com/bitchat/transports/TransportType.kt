@@ -11,6 +11,5 @@ package com.bitchat.transports
 enum class TransportType {
     BLUETOOTH,
     WIFI_DIRECT,
-    ULTRASONIC,
     LORA
 }
