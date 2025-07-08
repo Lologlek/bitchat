@@ -20,13 +20,15 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.launch
 import com.bitchat.model.BitchatPacket
+import com.bitchat.model.BinaryProtocol
 import com.bitchat.model.PeerInfo
 import java.net.ServerSocket
 import java.net.Socket
 
-/** Placeholder implementation for future WiFi Direct transport */
 class WiFiDirectTransport(private val context: Context) : TransportProtocol {
     override val transportType = TransportType.WIFI_DIRECT
+
+    private val PORT = 8988
 
     private val manager =
         context.getSystemService(Context.WIFI_P2P_SERVICE) as? WifiP2pManager
@@ -64,6 +66,9 @@ class WiFiDirectTransport(private val context: Context) : TransportProtocol {
                 WifiP2pManager.WIFI_P2P_PEERS_CHANGED_ACTION -> {
                     manager?.requestPeers(channel, peerListListener)
                 }
+                WifiP2pManager.WIFI_P2P_CONNECTION_CHANGED_ACTION -> {
+                    manager?.requestPeers(channel, peerListListener)
+                }
             }
         }
     }
@@ -71,7 +76,10 @@ class WiFiDirectTransport(private val context: Context) : TransportProtocol {
     override fun startDiscovery() {
         if (!isAvailable || receiverRegistered) return
 
-        val filter = IntentFilter(WifiP2pManager.WIFI_P2P_PEERS_CHANGED_ACTION)
+        val filter = IntentFilter().apply {
+            addAction(WifiP2pManager.WIFI_P2P_PEERS_CHANGED_ACTION)
+            addAction(WifiP2pManager.WIFI_P2P_CONNECTION_CHANGED_ACTION)
+        }
         context.registerReceiver(receiver, filter)
         receiverRegistered = true
 
@@ -82,14 +90,14 @@ class WiFiDirectTransport(private val context: Context) : TransportProtocol {
 
         serverJob = scope.launch {
             try {
-                val server = ServerSocket(8988)
+                val server = ServerSocket(PORT)
                 while (true) {
                     val socket = server.accept()
                     val data = socket.getInputStream().readBytes()
-                    delegate?.onPacketReceived(
-                        BitchatPacket(type = 0, senderID = byteArrayOf(), payload = data),
-                        PeerInfo(socket.inetAddress.hostAddress ?: "")
-                    )
+                    val packet = BinaryProtocol.decode(data)
+                    if (packet != null) {
+                        delegate?.onPacketReceived(packet, PeerInfo(socket.inetAddress.hostAddress ?: ""))
+                    }
                     socket.close()
                 }
             } catch (_: Exception) {
@@ -120,7 +128,7 @@ class WiFiDirectTransport(private val context: Context) : TransportProtocol {
 
     override fun send(packet: BitchatPacket, toPeer: String?) {
         val targets = if (toPeer == null) peers.keys.toList() else listOf(toPeer)
-        val data = packet.payload
+        val data = BinaryProtocol.encode(packet)
 
         for (id in targets) {
             val device = peers[id] ?: continue
@@ -132,7 +140,7 @@ class WiFiDirectTransport(private val context: Context) : TransportProtocol {
                         if (host != null) {
                             scope.launch {
                                 try {
-                                    Socket(host, 8988).use { socket ->
+                                    Socket(host, PORT).use { socket ->
                                         socket.getOutputStream().write(data)
                                     }
                                 } catch (_: Exception) {
